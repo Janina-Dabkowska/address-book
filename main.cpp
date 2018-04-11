@@ -235,6 +235,81 @@ void wyszukajPoNazwisku(vector<Adresat> adresaci)
     system("pause");
 }
 
+vector<Adresat> sortujPoNazwisku(vector<Adresat> adresaci, int lewy, int prawy)
+{
+    Adresat pivot = adresaci[(lewy+prawy)/2];
+    int i,j;
+    Adresat roboczy;
+    i=lewy;
+    j=prawy;
+    do
+    {
+        while(adresaci[i].nazwisko < pivot.nazwisko) i++;
+        while(adresaci[j].nazwisko > pivot.nazwisko) j--;
+        if(i<=j)
+        {
+            roboczy = adresaci[i];
+            adresaci[i] = adresaci[j];
+            adresaci[j] = roboczy;
+            i++;
+            j--;
+        }
+    }
+    while(i<=j);
+    if(j>lewy) adresaci = sortujPoNazwisku(adresaci, lewy, j);
+    if(i<prawy) adresaci = sortujPoNazwisku(adresaci, i, prawy);
+    return adresaci;
+}
+
+vector<Adresat> sortujPoImieniu(vector<Adresat> adresaci, int lewy, int prawy)
+{
+    Adresat pivot = adresaci[(lewy+prawy)/2];
+    int i,j;
+    Adresat roboczy;
+    i = lewy;
+    j = prawy;
+    do
+    {
+        while(adresaci[i].imie < pivot.imie)
+            i++;
+        while(adresaci[j].imie > pivot.imie)
+            j--;
+        if(i <= j)
+        {
+            roboczy = adresaci[i];
+            adresaci[i] = adresaci[j];
+            adresaci[j] = roboczy;
+            i++;
+            j--;
+        }
+    }
+    while(i <= j);
+    if(j > lewy)
+        adresaci = sortujPoImieniu(adresaci, lewy, j);
+    if(i < prawy)
+        adresaci = sortujPoImieniu(adresaci, i, prawy);
+    return adresaci;
+}
+vector<Adresat> sortujAlfabetycznie(vector<Adresat> adresaci)
+{
+    int iloscAdresatow=adresaci.size();
+    if (iloscAdresatow>1)
+    {
+        int iloscOsobONazwisku = 0;
+        adresaci= sortujPoNazwisku(adresaci,0,iloscAdresatow-1);
+        for(int i = 0; i < iloscAdresatow-1; i++)
+        {
+            if(adresaci[i].nazwisko == adresaci[i+1].nazwisko)
+                iloscOsobONazwisku++;
+            else if (iloscOsobONazwisku > 0)
+            {
+                adresaci= sortujPoImieniu(adresaci, i-iloscOsobONazwisku, i );//sortuje po imieniu czesc tablicy z takimi samymi nazwiskami
+                iloscOsobONazwisku = 0;
+            }
+        }
+    }
+    return adresaci;
+}
 vector<Adresat> usunAdresataOPodanymId(vector<Adresat> adresaci, bool* usunieto)
 {
     int idSzukane;
@@ -406,6 +481,7 @@ int main()
     char wybor;
     adresaci = wczytanieKsiazkiAdresowjZPliku();
     dostepneId = znajdzDostepneId(adresaci);
+    adresaci = sortujAlfabetycznie(adresaci);
     while(1)
     {
         system("cls");
@@ -426,6 +502,7 @@ int main()
         case '1' :
             adresaci = wprowadzDaneAdresata(adresaci, dostepneId);
             dostepneId = znajdzDostepneId(adresaci);
+            adresaci = sortujAlfabetycznie(adresaci);
             break;
         case '2' :
             wyszukajPoImieniu(adresaci);
@@ -451,6 +528,7 @@ int main()
             {
                 nadpiszZmienioneDaneDoPliku(adresaci);
                 *zmieniono=false;
+                adresaci = sortujAlfabetycznie(adresaci);
             }
             break;
         case '9' :
