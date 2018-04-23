@@ -3,9 +3,10 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
-
+string nazwaPlikuAdresatow = "ksiazkaAdresowa.txt";
 struct Adresat
 {
     int id;
@@ -18,7 +19,6 @@ Adresat podzielDaneNaPojedynczeSkladniki(string daneAdresata)
     string pojedynczaDana;
     int dlugosc = daneAdresata.length();
     int poczatek = 0;
-
     for(int i = 0; i<dlugosc; i++)
     {
         if(daneAdresata[i] == '|')
@@ -34,17 +34,33 @@ Adresat podzielDaneNaPojedynczeSkladniki(string daneAdresata)
     adresat.telefon = danePodzielone[3];
     adresat.email = danePodzielone[4];
     adresat.adres = danePodzielone[5];
-
     return adresat;
 }
-vector<Adresat>  wczytanieKsiazkiAdresowjZPliku()
+bool alfabetyczniePoNazwiskuIImieniu(Adresat lewy, Adresat prawy)
 {
+    if(lewy.nazwisko == prawy.nazwisko )
+        return (lewy.imie<prawy.imie);
+    else
+        return(lewy.nazwisko<prawy.nazwisko);
+}
+int znajdzDostepneId(vector<Adresat> &adresaci)
+{
+    int maxi=0;
+    for ( vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
 
+    {
+        if(indeksVectora->id > maxi)
+            maxi=indeksVectora->id;
+    }
+    return maxi+1;
+}
+int wczytajKsiazkeAdresowaZPliku(vector<Adresat> &adresaci)
+{
     string linia;
-    vector<Adresat> adresaci;
+    int dostepneId;
     fstream plik;
     Adresat adresat;
-    plik.open("ksiazkaAdresowa.txt", ios::in);
+    plik.open( nazwaPlikuAdresatow.c_str(), ios::in);
     if (plik.good() == true)
     {
         while (getline(plik, linia))
@@ -52,28 +68,31 @@ vector<Adresat>  wczytanieKsiazkiAdresowjZPliku()
             adresat = podzielDaneNaPojedynczeSkladniki(linia);
             adresaci.push_back(adresat);
         }
+        sort( adresaci.begin(), adresaci.end(), alfabetyczniePoNazwiskuIImieniu);
         plik.close();
+        dostepneId = znajdzDostepneId(adresaci);
     }
     else
     {
         cout << "Nie mozna otworzyc pliku"<<endl;
+        dostepneId=1;
         system("pause");
     }
-    return adresaci;
+    return dostepneId;
 }
-void wyswietlWszystkichAdresatow(vector<Adresat> adresaci)
+void wyswietlWszystkichAdresatow(vector<Adresat> &adresaci)
 {
     system("cls");
     cout << " -- Osoby zapisane w Twojej ksiazce adresowej --" << endl << endl;
     for(vector<Adresat>::iterator itr = adresaci.begin(),koniec = adresaci.end(); itr!=koniec; ++itr)
     {
         cout << endl;
-        cout << "ID: " << itr->id << endl;
-        cout <<  "Imie i nazwisko: " << itr->imie << " " << itr->nazwisko<<endl;
-        cout << "Telefon: " << itr->telefon << endl;
-        cout << "Email: " << itr->email << endl;
-        cout << "Adres: " << itr->adres << endl;
-        cout <<  " --- --- ---" << endl;
+        cout << "ID:               " << itr->id << endl;
+        cout << "Imie i nazwisko:  " << itr->imie << " " << itr->nazwisko<<endl;
+        cout << "Telefon:          " << itr->telefon << endl;
+        cout << "Email:            " << itr->email << endl;
+        cout << "Adres:            " << itr->adres << endl;
+        cout << endl << endl;
     }
     cout << "Masz zapisanych  " << adresaci.size() << " adresatow." << endl;
     system("pause");
@@ -86,110 +105,111 @@ string konwersjaIntToString(int liczbaInt)
 
     return liczbaString;
 }
-int znajdzDostepneId(vector<Adresat> adresaci)
+string zamienPierwszaLitereNaDuzaAPozostaleNaMale(string tekst)
 {
-    int maxi=0;
-    for ( vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
-
+    if (!tekst.empty())
     {
-        if(indeksVectora->id > maxi)
-            maxi=indeksVectora->id;
-
+        transform(tekst.begin(), tekst.end(), tekst.begin(), ::tolower);
+        tekst[0] = toupper(tekst[0]);
     }
-    return maxi+1;
+    return tekst;
 }
-vector<Adresat> wprowadzDaneAdresata(vector<Adresat> adresaci, int dostepneId)
+void dopiszAdresataDoPliku(Adresat adresat)
+{
+    fstream plikText;
+    plikText.open(nazwaPlikuAdresatow.c_str(), ios::out | ios::app);
 
+    if (plikText.good() == true)
+    {
+        plikText << adresat.id << '|';
+        plikText << adresat.imie << '|';
+        plikText << adresat.nazwisko << '|';
+        plikText << adresat.telefon << '|';
+        plikText << adresat.email << '|';
+        plikText << adresat.adres << '|' << endl;
+        plikText.close();
+
+        cout << endl << "Adresat zostal dodany" << endl;
+        system("pause");
+    }
+    else
+    {
+        cout << "Nie udalo sie otworzyc pliku i zapisac w nim danych." << endl;
+        system("pause");
+    }
+}
+int wprowadzDaneAdresata(vector<Adresat> &adresaci, int dostepneId)
 {
     Adresat adresat;
-    string imieSzukane, imieKolejne;
-    string nazwiskoSzukane, nazwiskoKolejne;
-    string daneAdresata,stringId;
+    string imieKolejne;
+    string nazwiskoKolejne;
+    string daneAdresata;
+    bool znalezionoAdresata=false;
     cout << "Podaj imie:  " << endl;
-    cin >> imieSzukane;
-    imieSzukane[0]=toupper(imieSzukane[0]);
-
+    cin >> adresat.imie;
+    adresat.imie = zamienPierwszaLitereNaDuzaAPozostaleNaMale( adresat.imie);
     cout << "Podaj nazwisko:  " << endl;
-    cin >> nazwiskoSzukane;
-    nazwiskoSzukane[0]=toupper(nazwiskoSzukane[0]);
+    cin >> adresat.nazwisko;
+    adresat.nazwisko=zamienPierwszaLitereNaDuzaAPozostaleNaMale(adresat.nazwisko);
     vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end();
     while(indeksVectora!=koniecVectora)
     {
         imieKolejne = indeksVectora->imie;
-        imieKolejne[0] = toupper(imieKolejne[0]);
         nazwiskoKolejne = indeksVectora->nazwisko;
-        nazwiskoKolejne[0] = toupper(nazwiskoKolejne[0]);
-        if ((nazwiskoKolejne == nazwiskoSzukane) && (imieKolejne == imieSzukane ))
+        if ((nazwiskoKolejne == adresat.nazwisko) && (imieKolejne == adresat.imie ))
         {
             cout << "Taki adresat jest juz w twojej ksiazce. " << endl;
             cout << endl;
-            cout << "ID: " << indeksVectora->id << endl;
+            cout << "ID:              " << indeksVectora->id << endl;
             cout << "Imie i nazwisko: " << indeksVectora->imie << " " << indeksVectora->nazwisko << endl;
-            cout << "Telefon: "<<indeksVectora->telefon<<endl;
-            cout << "Email: " << indeksVectora->email << endl;
-            cout << "Adres: " << indeksVectora->adres << endl;
-            cout << " --- --- ---" << endl;
+            cout << "Telefon:         " << indeksVectora->telefon<<endl;
+            cout << "Email:           " << indeksVectora->email << endl;
+            cout << "Adres:           " << indeksVectora->adres << endl;
+            cout << endl << endl;
             system("pause");
-            return adresaci;
+            znalezionoAdresata = true;
         }
         ++indeksVectora;
     }
-    adresat.id = dostepneId;
-    stringId = konwersjaIntToString(adresat.id);
-    adresat.imie = imieSzukane;
-    adresat.nazwisko = nazwiskoSzukane;
-
-    cout << "Podaj telefon:  " << endl;
-    cin.sync();
-    getline(cin, adresat.telefon);
-    cout << "Podaj email:  " << endl;
-    cin >> adresat.email;
-    cout << "Podaj adres:  " << endl;
-    cin.sync();
-    getline(cin,adresat.adres);
-    adresaci.push_back(adresat);
-    fstream plik;
-    plik.open("ksiazkaAdresowa.txt",ios::out|ios::app);
-    if (plik.good() == true)
+    if(!znalezionoAdresata)
     {
-        daneAdresata = stringId+"|"+adresat.imie+"|"+adresat.nazwisko+"|"+adresat.telefon+"|"+adresat.email+"|"+adresat.adres+"|";
-
-        plik << daneAdresata << endl;
-        plik.close();
+        adresat.id = dostepneId;
+        cout << "Podaj telefon:  " << endl;
+        cin.sync();
+        getline(cin, adresat.telefon);
+        cout << "Podaj email:  " << endl;
+        cin >> adresat.email;
+        cout << "Podaj adres:  " << endl;
+        cin.sync();
+        getline(cin,adresat.adres);
+        adresaci.push_back(adresat);
+        sort( adresaci.begin(), adresaci.end(), alfabetyczniePoNazwiskuIImieniu);
+        dostepneId++;
+        dopiszAdresataDoPliku(adresat);
     }
-    else
-    {
-        cout << "Nie udalo sie otworzyc pliku i zapisac do niego danych." << endl;
-        system("pause");
-    }
-    cout << "Osoba zostala dodana." << endl;
-    system("pause");
-
-    return adresaci;
+    return dostepneId;
 }
-
-void wyszukajPoImieniu(vector<Adresat> adresaci)
+void wyszukajPoImieniu(vector<Adresat> &adresaci)
 {
     string imieSzukane, imieKolejne;
     int iloscOsobZnalezionych = 0;
     cout << "Podaj imie osob, ktorych dane chcesz odszukac: " << endl;
     cin >> imieSzukane;
-    imieSzukane[0]=toupper(imieSzukane[0]);
+    imieSzukane=zamienPierwszaLitereNaDuzaAPozostaleNaMale(imieSzukane);
     system("cls");
-
     for(vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
     {
         imieKolejne = indeksVectora->imie;
-        imieKolejne[0] = toupper(imieKolejne[0]);
+        imieKolejne = zamienPierwszaLitereNaDuzaAPozostaleNaMale(imieKolejne);
         if(imieKolejne == imieSzukane)
         {
             cout << endl;
-            cout << "ID: " << indeksVectora->id << endl;
+            cout << "ID:              " << indeksVectora->id << endl;
             cout << "Imie i nazwisko: " << indeksVectora->imie << " " << indeksVectora->nazwisko << endl;
-            cout << "Telefon: "<<indeksVectora->telefon << endl;
-            cout << "Email: " << indeksVectora->email << endl;
-            cout << "Adres: " << indeksVectora->adres << endl;
-            cout << " --- --- ---" << endl;
+            cout << "Telefon:         " << indeksVectora->telefon << endl;
+            cout << "Email:           " << indeksVectora->email << endl;
+            cout << "Adres:           " << indeksVectora->adres << endl;
+            cout << endl << endl;
             iloscOsobZnalezionych++;
         }
     }
@@ -200,127 +220,67 @@ void wyszukajPoImieniu(vector<Adresat> adresaci)
         cout<<"W twojej ksiazce jest " << iloscOsobZnalezionych << " osob o imieniu " << imieSzukane << "." << endl;
     system("pause");
 }
-
 void wyszukajPoNazwisku(vector<Adresat> adresaci)
 {
     string nazwiskoSzukane,nazwiskoKolejne;
     int iloscOsobZnalezionych = 0;
     cout << "Podaj nazwisko osob, ktorych dane chcesz odszukac: " << endl;
-
     cin >> nazwiskoSzukane;
-    nazwiskoSzukane[0]=toupper(nazwiskoSzukane[0]);
+    nazwiskoSzukane=zamienPierwszaLitereNaDuzaAPozostaleNaMale(nazwiskoSzukane);
     system("cls");
-
     for(vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
     {
         nazwiskoKolejne = indeksVectora->nazwisko;
-        nazwiskoKolejne[0] = toupper(nazwiskoKolejne[0]);
+        nazwiskoKolejne = zamienPierwszaLitereNaDuzaAPozostaleNaMale(nazwiskoKolejne);
         if(nazwiskoKolejne == nazwiskoSzukane)
         {
             cout << endl;
-            cout << "ID: " << indeksVectora->id << endl;
-            cout << "Imie i nazwisko: " << indeksVectora->imie << " " << indeksVectora->nazwisko << endl;
-            cout << "Telefon: "<<indeksVectora->telefon << endl;
-            cout << "Email: " << indeksVectora->email << endl;
-            cout << "Adres: " << indeksVectora->adres << endl;
-            cout << " --- --- ---" << endl;
+            cout << "ID:               " << indeksVectora->id << endl;
+            cout << "Imie i nazwisko:  " << indeksVectora->imie << " " << indeksVectora->nazwisko << endl;
+            cout << "Telefon:          "<<indeksVectora->telefon << endl;
+            cout << "Email:            " << indeksVectora->email << endl;
+            cout << "Adres:            " << indeksVectora->adres << endl;
+            cout << endl << endl;
             iloscOsobZnalezionych++;
         }
     }
-
     if (iloscOsobZnalezionych == 0)
         cout << "W twojej ksiazce nie ma osob o nazwisku " << nazwiskoSzukane << " ." << endl;
     else
         cout<<"W twojej ksiazce jest " << iloscOsobZnalezionych << " osob o nazwisku " << nazwiskoSzukane << "." << endl;
     system("pause");
 }
-
-vector<Adresat> sortujPoNazwisku(vector<Adresat> adresaci, int lewy, int prawy)
+void zapiszWszystkichAdresatowDoPliku(vector<Adresat> &adresaci)
 {
-    Adresat pivot = adresaci[(lewy+prawy)/2];
-    int i,j;
-    Adresat roboczy;
-    i=lewy;
-    j=prawy;
-    do
+    string daneAdresata;
+    fstream plikText;
+    plikText.open(nazwaPlikuAdresatow.c_str(),ios::out);
+    if (plikText.good() == true)
     {
-        while(adresaci[i].nazwisko < pivot.nazwisko) i++;
-        while(adresaci[j].nazwisko > pivot.nazwisko) j--;
-        if(i<=j)
+        for ( vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
         {
-            roboczy = adresaci[i];
-            adresaci[i] = adresaci[j];
-            adresaci[j] = roboczy;
-            i++;
-            j--;
+            daneAdresata=konwersjaIntToString(indeksVectora->id)+"|"+indeksVectora->imie+"|"+indeksVectora->nazwisko+"|"+indeksVectora->telefon+"|"+indeksVectora->email+"|"+indeksVectora->adres+"|";
+            plikText << daneAdresata << endl;
         }
+        plikText.close();
     }
-    while(i<=j);
-    if(j>lewy) adresaci = sortujPoNazwisku(adresaci, lewy, j);
-    if(i<prawy) adresaci = sortujPoNazwisku(adresaci, i, prawy);
-    return adresaci;
-}
-
-vector<Adresat> sortujPoImieniu(vector<Adresat> adresaci, int lewy, int prawy)
-{
-    Adresat pivot = adresaci[(lewy+prawy)/2];
-    int i,j;
-    Adresat roboczy;
-    i = lewy;
-    j = prawy;
-    do
+    else
     {
-        while(adresaci[i].imie < pivot.imie)
-            i++;
-        while(adresaci[j].imie > pivot.imie)
-            j--;
-        if(i <= j)
-        {
-            roboczy = adresaci[i];
-            adresaci[i] = adresaci[j];
-            adresaci[j] = roboczy;
-            i++;
-            j--;
-        }
+        cout << "Nie udalo sie otworzyc pliku i zapisac do niego danych." << endl;
+        system("pause");
     }
-    while(i <= j);
-    if(j > lewy)
-        adresaci = sortujPoImieniu(adresaci, lewy, j);
-    if(i < prawy)
-        adresaci = sortujPoImieniu(adresaci, i, prawy);
-    return adresaci;
 }
-vector<Adresat> sortujAlfabetycznie(vector<Adresat> adresaci)
-{
-    int iloscAdresatow=adresaci.size();
-    if (iloscAdresatow>1)
-    {
-        int iloscOsobONazwisku = 0;
-        adresaci= sortujPoNazwisku(adresaci,0,iloscAdresatow-1);
-        for(int i = 0; i < iloscAdresatow-1; i++)
-        {
-            if(adresaci[i].nazwisko == adresaci[i+1].nazwisko)
-                iloscOsobONazwisku++;
-            else if (iloscOsobONazwisku > 0)
-            {
-                adresaci= sortujPoImieniu(adresaci, i-iloscOsobONazwisku, i );//sortuje po imieniu czesc tablicy z takimi samymi nazwiskami
-                iloscOsobONazwisku = 0;
-            }
-        }
-    }
-    return adresaci;
-}
-vector<Adresat> usunAdresataOPodanymId(vector<Adresat> adresaci, bool* usunieto)
+int usunAdresataOPodanymId(vector<Adresat> &adresaci, int dostepneId)
 {
     int idSzukane;
     char potwierdzenie;
     int indeksSzukanego = 0;
+    int dostepneIdPoUsunieciu;
     cout<<endl;
     cout << "Podaj id adresata, ktorego  chcesz usunac: " << endl;
     cin >> idSzukane;
     bool znaleziono = false;
     system("cls");
-
     for ( vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
     {
         if(idSzukane == indeksVectora->id)
@@ -329,58 +289,42 @@ vector<Adresat> usunAdresataOPodanymId(vector<Adresat> adresaci, bool* usunieto)
             break;
         }
         else
-        {
             indeksSzukanego++;
-        }
     }
     if (znaleziono)
     {
         system("cls");
-        cout <<" Dane znalezionego adresata: "<<endl;
+        cout << " USUWANIE ADRESATA" << endl<<endl;
+        cout <<" Dane adresata, ktorego chesz usunac: "<<endl;
         cout << "ID: " << adresaci[indeksSzukanego].id << endl;
         cout << "Imie i nazwisko: " <<adresaci[indeksSzukanego].imie << " " << adresaci[indeksSzukanego].nazwisko << endl;
         cout << "Telefon: "<<adresaci[indeksSzukanego].telefon << endl;
         cout << "Email: " << adresaci[indeksSzukanego].email << endl;
-        cout << "Adres: " << adresaci[indeksSzukanego].adres << endl;
-        cout << " --- --- ---" << endl;
-        cout <<"Czy na pewno chcesz usunac powyzszego adresata? t/n" << endl;
-        cin>>potwierdzenie;
+        cout << "Adres: " << adresaci[indeksSzukanego].adres <<endl<< endl;
+
+        cout <<"Czy napewno chesz usunac adresata t/n" << endl;
+        cin >> potwierdzenie;
         if (potwierdzenie == 't')
         {
-            adresaci.erase(adresaci.begin()+indeksSzukanego);
-            *usunieto=true;
+           adresaci.erase(adresaci.begin()+indeksSzukanego);
+
+            zapiszWszystkichAdresatowDoPliku(adresaci);
+            dostepneIdPoUsunieciu = znajdzDostepneId(adresaci);
             cout<<"Usunieto adresata o id:  " << idSzukane << "." << endl;
         }
+        else
+           {    dostepneIdPoUsunieciu = dostepneId;
+              cout<<"Nie usunieto adresata o id:  " << idSzukane << "." << endl;
+           }
     }
     else
         cout<<"W twojej ksiazce nie ma adresata o id:  " << idSzukane << "." << endl;
     system("pause");
-    return adresaci;
+    return dostepneIdPoUsunieciu;
 }
 
-void nadpiszZmienioneDaneDoPliku(vector<Adresat> adresaci)
-{
-    string daneAdresata,stringId;
-    fstream plik;
-    plik.open("ksiazkaAdresowa.txt",ios::out);
-    if (plik.good() == true)
-    {
-        for ( vector<Adresat>::iterator indeksVectora = adresaci.begin(),koniecVectora = adresaci.end(); indeksVectora!=koniecVectora; ++indeksVectora)
-        {
-            stringId=konwersjaIntToString(indeksVectora->id);
-            daneAdresata=stringId+"|"+indeksVectora->imie+"|"+indeksVectora->nazwisko+"|"+indeksVectora->telefon+"|"+indeksVectora->email+"|"+indeksVectora->adres+"|";
-            plik << daneAdresata << endl;
-        }
-        plik.close();
-    }
-    else
-    {
-        cout << "Nie udalo sie otworzyc pliku i zapisac do niego danych." << endl;
-        system("pause");
-    }
-}
-vector<Adresat> edytujDaneAdresataOPodanymId(vector<Adresat> adresaci, bool* zmieniono)
-{
+void edytujDaneAdresataOPodanymId(vector<Adresat> &adresaci)
+{ bool zmienionoImieLubNazwisko = false;
     int idSzukane;
     char wyborEdycji='0';
     int   indeksSzukanego = 0;
@@ -403,22 +347,22 @@ vector<Adresat> edytujDaneAdresataOPodanymId(vector<Adresat> adresaci, bool* zmi
         while(wyborEdycji!='6')
         {
             system("cls");
-            cout <<"Dane znalezionego adresata: "<<endl;
-            cout << "ID: " << adresaci[indeksSzukanego].id << endl;
+            cout <<"Dane znalezionego adresata: "<< endl <<endl;
+            cout << "ID:              " << adresaci[indeksSzukanego].id << endl;
             cout << "Imie i nazwisko: " <<adresaci[indeksSzukanego].imie << " " << adresaci[indeksSzukanego].nazwisko << endl;
-            cout << "Telefon: "<<adresaci[indeksSzukanego].telefon << endl;
-            cout << "Email: " << adresaci[indeksSzukanego].email << endl;
-            cout << "Adres: " << adresaci[indeksSzukanego].adres << endl;
-            cout << " --- --- ---" << endl;
+            cout << "Telefon:         " <<adresaci[indeksSzukanego].telefon << endl;
+            cout << "Email:           " << adresaci[indeksSzukanego].email << endl;
+            cout << "Adres:           " << adresaci[indeksSzukanego].adres << endl;
+            cout << endl << endl;
             cout << "EDYCJA DANYCH" << endl;
-            cout <<  " --- --- ---" << endl;
+            cout <<  endl << endl;
             cout << "1 - imie " << endl;
             cout << "2 - nazwisko" << endl;
             cout << "3 - numer telefonu" << endl;
             cout << "4 - email" << endl;
             cout << "5 - adres" << endl;
             cout << "6 - powrot do menu glownego" << endl;
-            cout <<  " --- --- ---" << endl;
+            cout <<  endl << endl;
             cout << "Twoj wybor: " << endl;
 
             cin>>wyborEdycji;
@@ -427,33 +371,37 @@ vector<Adresat> edytujDaneAdresataOPodanymId(vector<Adresat> adresaci, bool* zmi
             case '1' :
                 cout << "Podaj nowe imie: "<<endl;
                 cin>>adresaci[indeksSzukanego].imie;
-                *zmieniono = true;
+                adresaci[indeksSzukanego].imie = zamienPierwszaLitereNaDuzaAPozostaleNaMale(adresaci[indeksSzukanego].imie);
+                zapiszWszystkichAdresatowDoPliku(adresaci);
+                zmienionoImieLubNazwisko = true;
                 cout << "Zmieniono imie adresata o id:  " << idSzukane << "." << endl;
                 break;
             case '2' :
                 cout << "Podaj nowe nazwisko: "<<endl;
                 cin>>adresaci[indeksSzukanego].nazwisko;
-                *zmieniono=true;
+                adresaci[indeksSzukanego].nazwisko=zamienPierwszaLitereNaDuzaAPozostaleNaMale(adresaci[indeksSzukanego].nazwisko);
+                zapiszWszystkichAdresatowDoPliku(adresaci);
+                zmienionoImieLubNazwisko = true;
                 cout << "Zmieniono nazwisko adresata o id:  " << idSzukane << "." << endl;
                 break;
             case '3' :
                 cout << "Podaj nowy numer telefonu: "<<endl;
                 cin.sync();
                 getline(cin, adresaci[indeksSzukanego].telefon);
-                *zmieniono=true;
+                zapiszWszystkichAdresatowDoPliku(adresaci);
                 cout << "Zmieniono numer telefonu adresata o id:  " << idSzukane << "." << endl;
                 break;
             case '4' :
                 cout << "Podaj nowy email: "<<endl;
                 cin>>adresaci[indeksSzukanego].email;
-                *zmieniono=true;
+                zapiszWszystkichAdresatowDoPliku(adresaci);
                 cout << "Zmieniono email adresata o id:  " << idSzukane << "." << endl;
                 break;
             case '5' :
                 cout << "Podaj nowy adres: "<<endl;
                 cin.sync();
                 getline(cin, adresaci[indeksSzukanego].adres);
-                *zmieniono=true;
+                zapiszWszystkichAdresatowDoPliku(adresaci);
                 cout << "Zmieniono adres adresata o id:  " << idSzukane << "." << endl;
                 break;
             case '6' :
@@ -466,27 +414,20 @@ vector<Adresat> edytujDaneAdresataOPodanymId(vector<Adresat> adresaci, bool* zmi
     }
     else
         cout<<"W twojej ksiazce nie ma adresata o id:  " << idSzukane << "." << endl;
+        if( zmienionoImieLubNazwisko)
+            sort( adresaci.begin(), adresaci.end(), alfabetyczniePoNazwiskuIImieniu);
     system("pause");
-    return adresaci;
 }
-
 int main()
 {
     vector<Adresat> adresaci;
-    bool* usunieto = new bool;
-    *usunieto = false;
-    bool* zmieniono = new bool;
-    *zmieniono = false;
-    int dostepneId = 1;
+    int dostepneId;
     char wybor;
-    adresaci = wczytanieKsiazkiAdresowjZPliku();
-    dostepneId = znajdzDostepneId(adresaci);
-    adresaci = sortujAlfabetycznie(adresaci);
+    dostepneId = wczytajKsiazkeAdresowaZPliku(adresaci);
     while(1)
     {
         system("cls");
-        cout << "KSIAZKA ADRESOWA" << endl;
-        cout <<  " --- --- ---" << endl;
+        cout << ">>KSIAZKA ADRESOWA<<" << endl<<endl;
         cout << "1.Dodaj nowego adresata " << endl;
         cout << "2.Wyszukaj  po imieniu" << endl;
         cout << "3.Wyszukaj po nazwisku" << endl;
@@ -494,15 +435,12 @@ int main()
         cout << "5.Usun adresata" << endl;
         cout << "6.Edytuj adresata" << endl;
         cout << "9.Zakoncz program " << endl;
-        cout <<  " --- --- ---" << endl;
-        cout << "Twoj wybor: " << endl;
+        cout << endl<< "Twoj wybor: " << endl;
         cin >> wybor;
         switch(wybor)
         {
         case '1' :
-            adresaci = wprowadzDaneAdresata(adresaci, dostepneId);
-            dostepneId = znajdzDostepneId(adresaci);
-            adresaci = sortujAlfabetycznie(adresaci);
+            dostepneId = wprowadzDaneAdresata(adresaci, dostepneId);
             break;
         case '2' :
             wyszukajPoImieniu(adresaci);
@@ -514,26 +452,13 @@ int main()
             wyswietlWszystkichAdresatow(adresaci);
             break;
         case '5' :
-            adresaci = usunAdresataOPodanymId(adresaci, usunieto);
-            if(*usunieto)
-            {
-                nadpiszZmienioneDaneDoPliku(adresaci);
-                *usunieto = false;
-                dostepneId = znajdzDostepneId(adresaci);
-            }
+            dostepneId = usunAdresataOPodanymId(adresaci, dostepneId);
             break;
         case '6' :
-            adresaci = edytujDaneAdresataOPodanymId(adresaci,zmieniono);
-            if(*zmieniono)
-            {
-                nadpiszZmienioneDaneDoPliku(adresaci);
-                *zmieniono=false;
-                adresaci = sortujAlfabetycznie(adresaci);
-            }
+            edytujDaneAdresataOPodanymId(adresaci);
             break;
         case '9' :
-            delete usunieto;
-            delete zmieniono;
+            cout<<endl<<"KONIEC PROGRAMU"<<endl;
             exit(0);
         default:
             cout << "Nie ma takiej opcji w menu, podaj poprawna opcje po ukazaniu sie menu" << endl;
@@ -542,4 +467,3 @@ int main()
     }
     return 0;
 }
-
