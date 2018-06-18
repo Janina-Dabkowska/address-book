@@ -11,13 +11,13 @@ string nazwaPlikuAdresatow = "Adresaci.txt";
 string nazwaTymczasowaPlikuAdresatow = "Adresaci_tymczasowy.txt";
 struct Uzytkownik
 {
-    int id;
-    string nazwa, haslo;
+    int id = 0;
+    string nazwa = "", haslo = "";
 };
 struct Adresat
 {
-    int id,idUzytkownika;
-    string imie, nazwisko, telefon, email, adres;
+    int id = 0,idUzytkownika = 0;
+    string imie ="", nazwisko = "", telefon = "", email = "", adres ="";
 };
 string zamienPierwszaLitereNaDuzaAPozostaleNaMale(string tekst)
 {
